@@ -21,3 +21,8 @@ node_modules/
 # Raw Sage extracts contain personal data — never commit
 *.mdb
 *.accdb
+
+*.env
+*.env.* 
+*venv/
+venv/
