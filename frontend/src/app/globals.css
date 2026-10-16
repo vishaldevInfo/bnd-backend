@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* Design tokens taken from the approved HTML prototype: light neutral
+   workspace, white surfaces, hairline borders, restrained teal accent. */
+@theme {
+  --color-ink: #1c2430;
+  --color-ink-soft: #445060;
+  --color-muted: #5c6878;
+  --color-rule: #dfe6ec;
+  --color-rule-firm: #c2ccd6;
+  --color-paper: #f4f7f9;
+  --color-surface: #ffffff;
+  --color-signal: #0e7490;
+  --color-signal-lift: #0891b2;
+  --color-signal-tint: #e8f4f8;
+  --color-positive: #1f6b45;
+  --color-positive-tint: #e7f4ec;
+  --color-negative: #a32b1c;
+  --color-negative-tint: #fbebe8;
+  --color-row-hover: #f7fafb;
+
+  /* Chart marks: brand teal family, validated for chroma/contrast on white. */
+  --color-chart: #0891b2;
+  --color-chart-grid: #e6ecf0;
+
+  /* KPI card tints (decorative identity only, never status). */
+  --color-kpi-teal: #e8f4f8;
+  --color-kpi-teal-ink: #0e7490;
+  --color-kpi-sky: #eaf2fd;
+  --color-kpi-sky-ink: #2b5fb4;
+  --color-kpi-amber: #fdf4e3;
+  --color-kpi-amber-ink: #9a5b05;
+  --color-kpi-violet: #f1eefc;
+  --color-kpi-violet-ink: #5b45b0;
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1.55;
+  /* Figures in tables and KPI cards must line up column by column. */
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+::selection {
+  background: var(--color-signal);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

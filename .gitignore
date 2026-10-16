@@ -1,0 +1,23 @@
+# Secrets: only the .env.example templates are committed
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / Next.js (frontend/.gitignore covers the rest)
+node_modules/
+.next/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Raw Sage extracts contain personal data — never commit
+*.mdb
+*.accdb
