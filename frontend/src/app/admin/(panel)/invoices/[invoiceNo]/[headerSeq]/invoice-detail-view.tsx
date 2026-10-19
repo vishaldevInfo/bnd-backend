@@ -15,7 +15,7 @@ export function InvoiceDetailView() {
 
   return (
     <>
-      <Link href="/invoices" className="mb-4 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-ink-soft hover:text-ink">
+      <Link href="/admin/invoices" className="mb-4 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-ink-soft hover:text-ink">
         <ArrowLeft size={16} aria-hidden />
         Back to invoices
       </Link>

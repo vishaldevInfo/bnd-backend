@@ -1,26 +1,34 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Optimistic check only: sends visitors without a session cookie to /login.
-// The cookie's signature and expiry are verified by FastAPI on every API call,
-// and an expired session is redirected to /login by lib/api.ts.
+// Optimistic check only: it sends visitors without a session cookie to the right
+// sign-in page. It cannot tell the roles apart (the cookie is HTTP-only), so the
+// backend decides what each signed-in user may see on every API call. The sign-in
+// pages ask /api/auth/me and send each role to its own home.
 const SESSION_COOKIE = "bnd_session";
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const hasSession = request.cookies.has(SESSION_COOKIE);
-
-  if (!hasSession && pathname !== "/login") {
-    const loginUrl = new URL("/login", request.url);
-    if (pathname !== "/") loginUrl.searchParams.set("next", pathname + search);
-    return NextResponse.redirect(loginUrl);
+  if (request.cookies.has(SESSION_COOKIE)) {
+    return NextResponse.next();
   }
-  // Signed-in users have no reason to see the login form. (An expired cookie is
-  // deleted by the backend on its first 401, so this cannot loop.)
-  if (hasSession && pathname === "/login") {
-    return NextResponse.redirect(new URL("/", request.url));
+
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+  if (pathname.startsWith("/admin/")) {
+    return redirectTo("/admin", pathname + search, request);
+  }
+  if (pathname === "/portal" || pathname.startsWith("/portal/")) {
+    return redirectTo("/login", pathname + search, request);
   }
   return NextResponse.next();
+}
+
+function redirectTo(signIn: string, next: string, request: NextRequest) {
+  const url = new URL(signIn, request.url);
+  url.searchParams.set("next", next);
+  return NextResponse.redirect(url);
 }
 
 export const config = {

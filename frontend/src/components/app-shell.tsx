@@ -7,6 +7,7 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  ListChecks,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -18,13 +19,14 @@ import { apiPost, useApi, type CurrentUser } from "@/lib/api";
 import { inputStyles } from "@/components/ui";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/invoices", label: "Invoices", icon: Receipt },
-  { href: "/reports", label: "Reports", icon: FileText },
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/invoices", label: "Invoices", icon: Receipt },
+  { href: "/admin/reports", label: "Reports", icon: FileText },
+  { href: "/admin/review-queue", label: "Review queue", icon: ListChecks },
 ];
 
 function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  return pathname.startsWith(href);
 }
 
 // ---------- Remembered collapse state ----------
@@ -130,7 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function SidebarHeader({ collapsed, onCloseDrawer }: { collapsed: boolean; onCloseDrawer: () => void }) {
   return (
     <div className={`flex h-16 items-center border-b border-rule px-4 ${collapsed ? "lg:justify-center lg:px-0" : "justify-between"}`}>
-      <Link href="/" className={`flex items-center gap-2.5 ${collapsed ? "lg:hidden" : ""}`}>
+      <Link href="/admin/dashboard" className={`flex items-center gap-2.5 ${collapsed ? "lg:hidden" : ""}`}>
         <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-md bg-signal text-[14px] font-bold text-white">
           B
         </span>
@@ -193,7 +195,7 @@ function NavLink({
 }
 
 function UserBlock({ collapsed }: { collapsed: boolean }) {
-  // A 401 here (expired session) redirects to /login inside the API helper.
+  // A 401 here (expired session) redirects to /admin inside the API helper.
   const { data: user } = useApi<CurrentUser>("/api/auth/me");
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -204,7 +206,7 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
       await apiPost("/api/auth/logout");
     } finally {
       // In-app navigation, no page reload. replace() keeps "Back" from returning to a signed-in page.
-      router.replace("/login");
+      router.replace("/admin");
     }
   }
 
@@ -214,11 +216,11 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
         aria-hidden
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper text-[13px] font-semibold text-ink-soft uppercase"
       >
-        {user?.email.charAt(0) ?? ""}
+        {user?.email?.charAt(0) ?? ""}
       </span>
       <div className={`min-w-0 flex-1 ${collapsed ? "lg:hidden" : ""}`}>
         <p className="text-[12px] text-muted">Signed in as</p>
-        <p className="truncate text-[13px] font-medium" title={user?.email}>
+        <p className="truncate text-[13px] font-medium" title={user?.email ?? undefined}>
           {user?.email ?? "…"}
         </p>
       </div>
@@ -239,7 +241,7 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
 function TopBar({ pathname, onOpenDrawer }: { pathname: string; onOpenDrawer: () => void }) {
   const router = useRouter();
   // The Invoices page has its own search field, so the global one is hidden there.
-  const showSearch = !pathname.startsWith("/invoices");
+  const showSearch = !pathname.startsWith("/admin/invoices");
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-rule bg-surface/95 px-4 backdrop-blur sm:px-6 lg:px-8">
@@ -253,7 +255,7 @@ function TopBar({ pathname, onOpenDrawer }: { pathname: string; onOpenDrawer: ()
           onSubmit={(event) => {
             event.preventDefault();
             const q = String(new FormData(event.currentTarget).get("q") ?? "").trim();
-            router.push(q ? `/invoices?q=${encodeURIComponent(q)}` : "/invoices");
+            router.push(q ? `/admin/invoices?q=${encodeURIComponent(q)}` : "/admin/invoices");
           }}
         >
           <Search size={16} aria-hidden className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />

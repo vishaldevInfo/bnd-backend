@@ -13,16 +13,16 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import Connection
 
 from app import invoice_queries as q
-from app.auth import require_user
 from app.config import get_settings
 from app.database import engine, get_db
 from app.routes.invoices import MAX_PAGE_SIZE, date_range
+from app.sessions import require_admin
 from app.schemas import InvoiceReport
 
 REPORT_SORT = ("invoice_date", "asc")
 CSV_ROWS_PER_CHUNK = 1000
 
-router = APIRouter(prefix="/api/reports", tags=["reports"], dependencies=[Depends(require_user)])
+router = APIRouter(prefix="/api/reports", tags=["reports"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/invoices", response_model=InvoiceReport)

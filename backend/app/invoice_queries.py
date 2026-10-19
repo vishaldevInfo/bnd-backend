@@ -61,6 +61,7 @@ class InvoiceFilters:
     end: date | None = None  # inclusive
     search: str | None = None
     facility: str | None = None
+    customerno: str | None = None  # set for end users; always an exact match
 
     def where_sql(self) -> tuple[str, dict]:
         """WHERE clause and bind parameters. Uses header columns only."""
@@ -80,6 +81,9 @@ class InvoiceFilters:
         if self.facility:
             clauses.append("h.salespersonno = :facility")
             params["facility"] = self.facility
+        if self.customerno:
+            clauses.append("h.customerno = :customerno")
+            params["customerno"] = self.customerno
         return " AND ".join(clauses), params
 
 
@@ -217,7 +221,10 @@ def invoice_date_bounds(db: Connection) -> RowMapping:
         FROM ar_invoicehistoryheader""")).mappings().one()
 
 
-def get_invoice_header(db: Connection, invoice_no: str, header_seq: str) -> RowMapping | None:
+def get_invoice_header(db: Connection, invoice_no: str, header_seq: str,
+                       customerno: str | None = None) -> RowMapping | None:
+    """One invoice header. With customerno set, the invoice must belong to that customer."""
+    owner_filter = "AND h.customerno = :customerno" if customerno else ""
     return db.execute(text(f"""
         SELECT {INVOICE_COLUMNS},
                h.invoiceduedate::date               AS due_date,
@@ -227,8 +234,8 @@ def get_invoice_header(db: Connection, invoice_no: str, header_seq: str) -> RowM
                h.nontaxablesalesamt                 AS non_taxable_amount
         FROM ar_invoicehistoryheader h
         {FACILITY_JOIN}
-        WHERE h.invoiceno = :invoice_no AND h.headerseqno = :header_seq"""),
-        {"invoice_no": invoice_no, "header_seq": header_seq}).mappings().one_or_none()
+        WHERE h.invoiceno = :invoice_no AND h.headerseqno = :header_seq {owner_filter}"""),
+        {"invoice_no": invoice_no, "header_seq": header_seq, "customerno": customerno}).mappings().one_or_none()
 
 
 def get_invoice_lines(db: Connection, invoice_no: str, header_seq: str) -> list[RowMapping]:

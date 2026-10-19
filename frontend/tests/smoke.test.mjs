@@ -1,6 +1,6 @@
 // End-to-end smoke test: drives headless Chrome through the running app.
 //
-// Needs the backend and frontend running (see README) plus the demo login:
+// Needs the backend and frontend running (see README) plus the admin login (ENV account):
 //   SMOKE_EMAIL=demo@example.com SMOKE_PASSWORD=... npm run test:smoke
 // Optional: APP_URL (default http://localhost:3010), CHROME_PATH (default google-chrome).
 //
@@ -129,9 +129,9 @@ after(async () => {
 // ---------- The user journey (tests run in order and share the browser) ----------
 
 test("signed-out visitors are sent to the login page", { skip: skipReason }, async () => {
-  await open("/invoices");
-  await waitFor("location.pathname === '/login'", "redirect to /login");
-  assert.equal(await path(), "/login?next=%2Finvoices");
+  await open("/admin/invoices");
+  await waitFor("location.pathname === '/admin'", "redirect to /admin");
+  assert.equal(await path(), "/admin?next=%2Fadmin%2Finvoices");
 });
 
 test("wrong credentials show one generic error", { skip: skipReason }, async () => {
@@ -143,7 +143,7 @@ test("wrong credentials show one generic error", { skip: skipReason }, async () 
 
 test("signing in returns to the requested page", { skip: skipReason }, async () => {
   await fillLogin(SMOKE_EMAIL, SMOKE_PASSWORD);
-  await waitFor("location.pathname === '/invoices'", "redirect back to /invoices");
+  await waitFor("location.pathname === '/admin/invoices'", "redirect back to /admin/invoices");
   await waitFor(`${ROWS}.length > 0`, "invoice rows");
   const summary = await evaluate(text("[aria-live=polite]"));
   assert.match(summary, /^[\d,]+ invoices in total$/);
@@ -151,13 +151,13 @@ test("signing in returns to the requested page", { skip: skipReason }, async () 
 
 test("an invoice opens with its line items and total", { skip: skipReason }, async () => {
   await evaluate("document.querySelector('tbody tr a').click()");
-  await waitFor("/^\\/invoices\\/[^/]+\\/[^/]+$/.test(location.pathname)", "invoice detail URL");
+  await waitFor("/^\\/admin\\/invoices\\/[^/]+\\/[^/]+$/.test(location.pathname)", "invoice detail URL");
   await waitFor("document.body.innerText.includes('Invoice total')", "line items table");
   assert.ok(await evaluate(`${ROWS}.length > 0`), "at least one line item");
 });
 
 test("dashboard shows KPIs, both charts and recent invoices", { skip: skipReason }, async () => {
-  await open("/");
+  await open("/admin/dashboard");
   await waitFor("document.querySelectorAll('.recharts-surface').length === 2", "two charts", 45_000);
   const kpis = await evaluate(`["Total Invoices", "Total Amount", "Average Invoice", "Active Facilities"]
     .map((label) => document.body.innerText.includes(label))`);
@@ -166,20 +166,20 @@ test("dashboard shows KPIs, both charts and recent invoices", { skip: skipReason
 });
 
 test("filters are kept in the URL", { skip: skipReason }, async () => {
-  await open("/invoices?sort=amount&order=asc&page_size=50");
+  await open("/admin/invoices?sort=amount&order=asc&page_size=50");
   await waitFor(`${ROWS}.length === 50`, "50 rows");
   assert.equal(await evaluate(text("th[aria-sort] button")), "Amount");
 });
 
 test("report offers a CSV download with the same filters", { skip: skipReason }, async () => {
-  await open("/reports?start=2026-01-01&end=2026-03-31");
+  await open("/admin/reports?start=2026-01-01&end=2026-03-31");
   const href = await waitFor("document.querySelector('a[download]')?.getAttribute('href')", "Download CSV link");
   assert.equal(href, "/api/reports/invoices/export?start=2026-01-01&end=2026-03-31");
 });
 
 test("signing out returns to login and protects pages again", { skip: skipReason }, async () => {
   await evaluate("document.querySelector('button[aria-label=\"Sign out\"]').click()");
-  await waitFor("location.pathname === '/login'", "login page after sign out");
-  await open("/");
-  await waitFor("location.pathname === '/login'", "redirect to /login after sign out");
+  await waitFor("location.pathname === '/admin'", "admin login page after sign out");
+  await open("/admin/dashboard");
+  await waitFor("location.pathname === '/admin'", "redirect to /admin after sign out");
 });

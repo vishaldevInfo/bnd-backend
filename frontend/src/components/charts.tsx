@@ -163,7 +163,7 @@ export function TopFacilitiesChart({ data }: { data: TopFacilities }) {
               cursor="pointer"
               isAnimationActive={false}
               onClick={(bar: { payload?: { facility_code: string } }) => {
-                if (bar.payload) router.push(`/invoices?facility=${encodeURIComponent(bar.payload.facility_code)}`);
+                if (bar.payload) router.push(`/admin/invoices?facility=${encodeURIComponent(bar.payload.facility_code)}`);
               }}
             />
           </BarChart>

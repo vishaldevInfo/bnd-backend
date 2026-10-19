@@ -1,9 +1,12 @@
-"""Demo login, session cookie, rate limiting and endpoint protection."""
-from app.auth import SESSION_COOKIE, create_session_token, hash_password, verify_password
+"""Admin login, session cookie, rate limiting and endpoint protection."""
+from itsdangerous import URLSafeTimedSerializer
+
+from app.auth import hash_password, verify_password
 from app.config import get_settings
+from app.sessions import SESSION_COOKIE, issue_admin_session, issue_end_user_session, read_session
 from tests.conftest import TEST_EMAIL, TEST_PASSWORD
 
-LOGIN = "/api/auth/login"
+LOGIN = "/api/admin/login"
 
 
 def login(client, email=TEST_EMAIL, password=TEST_PASSWORD, **kwargs):
@@ -22,7 +25,7 @@ def test_password_hash_is_bcrypt_and_round_trips():
 def test_login_sets_secure_session_cookie(client):
     response = login(client)
     assert response.status_code == 200
-    assert response.json() == {"email": TEST_EMAIL}
+    assert response.json() == {"role": "admin", "email": TEST_EMAIL, "customerno": None}
     cookie_header = response.headers["set-cookie"].lower()
     assert f"{SESSION_COOKIE}=" in cookie_header
     assert "httponly" in cookie_header
@@ -32,7 +35,7 @@ def test_login_sets_secure_session_cookie(client):
 def test_email_is_case_insensitive(client):
     response = login(client, email="  TESTER@Example.COM ")
     assert response.status_code == 200
-    assert response.json() == {"email": TEST_EMAIL}
+    assert response.json()["email"] == TEST_EMAIL
 
 
 def test_wrong_password_and_unknown_email_get_the_same_error(client):
@@ -68,14 +71,14 @@ def test_me_requires_a_session(client):
     assert client.get("/api/auth/me").status_code == 401
 
 
-def test_me_returns_the_signed_in_user(signed_in_client):
+def test_me_returns_the_signed_in_admin(signed_in_client):
     response = signed_in_client.get("/api/auth/me")
     assert response.status_code == 200
-    assert response.json() == {"email": TEST_EMAIL}
+    assert response.json() == {"role": "admin", "email": TEST_EMAIL, "customerno": None}
 
 
 def test_tampered_cookie_is_rejected(client):
-    token = create_session_token(TEST_EMAIL)
+    token = issue_admin_session(TEST_EMAIL)
     client.cookies.set(SESSION_COOKIE, token[:-2] + "xx")
     response = client.get("/api/auth/me")
     assert response.status_code == 401
@@ -83,7 +86,7 @@ def test_tampered_cookie_is_rejected(client):
 
 
 def test_expired_session_is_rejected(client, monkeypatch):
-    client.cookies.set(SESSION_COOKIE, create_session_token(TEST_EMAIL))
+    client.cookies.set(SESSION_COOKIE, issue_admin_session(TEST_EMAIL))
     monkeypatch.setattr(get_settings(), "session_max_age_hours", -1)
     assert client.get("/api/auth/me").status_code == 401
 
@@ -93,6 +96,24 @@ def test_logout_clears_the_cookie(signed_in_client):
     assert response.status_code == 204
     assert SESSION_COOKIE not in signed_in_client.cookies
     assert signed_in_client.get("/api/auth/me").status_code == 401
+
+
+def test_end_user_token_is_not_an_admin_session():
+    assert read_session(issue_end_user_session("3f8c2c4e-0000-4000-8000-000000000001")).role == "end_user"
+    assert read_session(issue_end_user_session("x")).role == "end_user"
+
+
+def test_session_for_another_admin_email_is_rejected(client):
+    from app.sessions import _serializer, SESSION_SALT
+    forged = _serializer(SESSION_SALT).dumps({"role": "admin", "email": "someone@example.com"})
+    assert read_session(forged) is None
+
+
+def test_pre_role_session_format_is_rejected():
+    from app.sessions import _serializer
+    # Sessions issued before the role claim used the v1 salt, so they fail signature checks.
+    old = URLSafeTimedSerializer("x" * 40, salt="bnd-session").dumps({"email": TEST_EMAIL})
+    assert read_session(old) is None
 
 
 def test_cross_origin_login_is_rejected(client):

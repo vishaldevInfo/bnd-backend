@@ -13,12 +13,13 @@ export class ApiError extends Error {
   }
 }
 
-/** Session expired mid-use: go to the login page and come back here afterwards.
- * (Plain helper outside React, so it cannot use the Next.js router.) */
+/** Session expired or wrong role: go to the matching sign-in page and come back here afterwards.
+ * Admin pages return to /admin, customer pages to /login. (Plain helper outside React, so it cannot use the Next.js router.) */
 function redirectToLogin() {
   const next = window.location.pathname + window.location.search;
+  const signIn = window.location.pathname.startsWith("/admin") ? "/admin" : "/login";
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- runs outside React, no router here
-  window.location.href = `/login?next=${encodeURIComponent(next)}`;
+  window.location.href = `${signIn}?next=${encodeURIComponent(next)}`;
 }
 
 async function request<T>(path: string, init: RequestInit, redirectOnUnauthorized: boolean): Promise<T> {
@@ -29,7 +30,8 @@ async function request<T>(path: string, init: RequestInit, redirectOnUnauthorize
     throw new ApiError("Cannot reach the server. Check that the backend is running.", 0);
   }
 
-  if (response.status === 401 && redirectOnUnauthorized) {
+  // 403 means "signed in, but not for this area" (an end user on an admin page), so sign-in is the next step.
+  if ((response.status === 401 || response.status === 403) && redirectOnUnauthorized) {
     redirectToLogin();
   }
 
@@ -106,7 +108,11 @@ export function useApi<T>(path: string | null): ApiState<T> {
 
 // ---------- API types (mirror backend/app/schemas.py) ----------
 
-export type CurrentUser = { email: string };
+export type CurrentUser = {
+  role: "admin" | "end_user";
+  email: string | null;
+  customerno: string | null;
+};
 
 export type InvoiceRow = {
   invoice_no: string;
@@ -175,5 +181,5 @@ export type InvoiceReport = {
 };
 
 export function invoiceHref(row: Pick<InvoiceRow, "invoice_no" | "header_seq">) {
-  return `/invoices/${encodeURIComponent(row.invoice_no)}/${encodeURIComponent(row.header_seq)}`;
+  return `/admin/invoices/${encodeURIComponent(row.invoice_no)}/${encodeURIComponent(row.header_seq)}`;
 }
