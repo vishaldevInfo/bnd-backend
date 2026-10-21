@@ -154,7 +154,6 @@ def send_code(body: SendCodeRequest, request: Request, conn: Connection = Depend
 
     challenge_id = otp.new_challenge_id()
     code = otp.issue_code(conn, challenge_id=challenge_id, user_id=None, purpose="register", email=email)
-    print(code)
     _send_code(email, code)
     audit.record("otp_sent", metadata={"purpose": "register"})
 

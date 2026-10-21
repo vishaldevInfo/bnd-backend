@@ -6,6 +6,7 @@ the challenge id is part of the MAC, so a code works only for its own challenge.
 """
 import hashlib
 import hmac
+import logging
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -14,6 +15,9 @@ from sqlalchemy import Connection, text
 
 from app import notify
 from app.config import get_settings
+
+logger = logging.getLogger("bnd.otp")
+TEST_CODE = "123456"
 
 
 def new_challenge_id() -> str:
@@ -27,7 +31,7 @@ def _hash(challenge_id: str, code: str) -> str:
 
 def issue_code(conn: Connection, *, challenge_id: str, user_id: str | None, purpose: str, email: str) -> str:
     """Create a new code for the challenge, void the previous one, save it and return the code."""
-    code = f"{secrets.randbelow(1_000_000):06d}"
+    code = TEST_CODE if get_settings().otp_test_mode else f"{secrets.randbelow(1_000_000):06d}"
     expires_at = datetime.now(UTC) + timedelta(minutes=get_settings().otp_ttl_minutes)
     conn.execute(text("""
         UPDATE app.otp_codes SET consumed_at = now()
@@ -44,6 +48,9 @@ def issue_code(conn: Connection, *, challenge_id: str, user_id: str | None, purp
 
 def send_code(email: str, code: str) -> None:
     """Email the code. Raises notify.DeliveryError if the mail is not sent."""
+    if get_settings().otp_test_mode:
+        logger.warning("TEST MODE: no email sent. Use code %s", TEST_CODE)
+        return
     notify.send_code(email, code, get_settings().otp_ttl_minutes)
 
 

@@ -7,6 +7,7 @@ from app.auth import hash_password
 
 TEST_EMAIL = "tester@example.com"
 TEST_PASSWORD = "correct horse battery staple"
+os.environ["OTP_TEST_MODE"] = "false"  # tests capture real codes; the test-mode test switches it on itself
 os.environ["DEMO_EMAIL"] = TEST_EMAIL
 os.environ.pop("DEMO_USERNAME", None)
 os.environ["DEMO_PASSWORD_HASH"] = hash_password(TEST_PASSWORD)

@@ -286,3 +286,11 @@ def test_admin_sees_the_review_queue_and_customers_do_not(client, identity_rows,
     client.cookies.clear()
     register(client, sent)
     assert client.get("/api/admin/review-queue").status_code == 403  # a customer session cannot see it
+
+
+def test_test_mode_sends_nothing_and_accepts_123456(client, identity_rows, sent, monkeypatch):
+    monkeypatch.setattr(get_settings(), "otp_test_mode", True)
+    found = lookup(client).json()
+    token = send_code(client, found["registration_token"]).json()["verification_token"]
+    assert sent == []  # no email goes out in test mode
+    assert verify(client, token, "123456").status_code == 200

@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     otp_max_sends_per_hour: int = 5  # codes to one email address
     registration_token_minutes: int = 15  # lifetime of the signed step tokens
 
+    # TEST MODE ONLY: no email is sent and every code is "123456". Refused on HTTPS.
+    otp_test_mode: bool = False
+
     # Email delivery. "console" writes the code to the server log (development only).
     email_provider: Literal["console", "smtp"] = "console"
     email_from: str = "no-reply@example.com"
@@ -89,4 +92,6 @@ def get_settings() -> Settings:
     # Checked here rather than in a validator, because pydantic would echo every setting.
     if settings.cookie_secure and settings.email_provider == "console":
         raise SystemExit("Startup refused: EMAIL_PROVIDER must not be 'console' when COOKIE_SECURE=true.")
+    if settings.cookie_secure and settings.otp_test_mode:
+        raise SystemExit("Startup refused: OTP_TEST_MODE must not be enabled when COOKIE_SECURE=true.")
     return settings
