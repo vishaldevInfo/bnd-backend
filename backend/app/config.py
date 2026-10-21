@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     session_secret: SecretStr = Field(min_length=32)
     session_max_age_hours: float = 8
     cookie_secure: bool = False  # true when served over HTTPS
-    allowed_origins: str = "https://bnd-frontend-1.onrender.com/,http://localhost:3010"  # browser origins allowed to POST (CSRF check)
+    allowed_origins: str = "https://bnd-frontend-1.onrender.com,http://localhost:3010"  # browser origins allowed to POST (CSRF check)
     login_max_failures: int = 5  # failed admin sign-ins per email...
     login_window_minutes: int = 15  # ...within this window
 
