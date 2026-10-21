@@ -42,6 +42,12 @@ def app_db() -> Connection:
         pytest.skip("APP_DB_USER / APP_DB_PASSWORD are not set")
     if os.environ.get("TEST_APP_DB_RESET") != "1":
         pytest.skip("set TEST_APP_DB_RESET=1 to run tests that reset the app schema (use a test database)")
+    from app.config import get_settings
+
+    database = get_settings().app_db_name or get_settings().db_name
+    if "test" not in database.lower():
+        # Refuse to truncate anything that is not clearly a test database.
+        pytest.skip(f"app database {database!r} does not look like a test database (name must contain 'test')")
     try:
         connection = app_engine.connect()
     except Exception:

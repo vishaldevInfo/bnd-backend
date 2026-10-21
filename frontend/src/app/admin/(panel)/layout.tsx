@@ -1,12 +1,28 @@
-import { Suspense } from "react";
-import { AppShell } from "@/components/app-shell";
+"use client";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+import { Suspense } from "react";
+import { FileText, LayoutDashboard, ListChecks, Receipt } from "lucide-react";
+import { AppShell, type ShellConfig } from "@/components/app-shell";
+
+const ADMIN_SHELL: ShellConfig = {
+  brandHref: "/admin/dashboard",
+  subtitle: "Invoice history",
+  signInHref: "/admin",
+  nav: [
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/invoices", label: "Invoices", icon: Receipt },
+    { href: "/admin/reports", label: "Reports", icon: FileText },
+    { href: "/admin/review-queue", label: "Review queue", icon: ListChecks },
+  ],
+  search: { listPath: "/admin/invoices", placeholder: "Search invoice no, member no or name…" },
+};
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   // The shell reads the current path (active nav item, drawer), which Next.js only
   // knows at request time for dynamic routes such as /invoices/[no]/[seq].
   return (
     <Suspense fallback={<ShellPlaceholder />}>
-      <AppShell>{children}</AppShell>
+      <AppShell config={ADMIN_SHELL}>{children}</AppShell>
     </Suspense>
   );
 }

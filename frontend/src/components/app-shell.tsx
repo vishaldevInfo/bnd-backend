@@ -3,30 +3,23 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import {
-  FileText,
-  LayoutDashboard,
-  LogOut,
-  ListChecks,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Receipt,
-  Search,
-  X,
-} from "lucide-react";
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, X, type LucideIcon } from "lucide-react";
 import { apiPost, useApi, type CurrentUser } from "@/lib/api";
 import { inputStyles } from "@/components/ui";
 
-const NAV_ITEMS = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/invoices", label: "Invoices", icon: Receipt },
-  { href: "/admin/reports", label: "Reports", icon: FileText },
-  { href: "/admin/review-queue", label: "Review queue", icon: ListChecks },
-];
+/** What the shell shows for one area of the app (admin or customer). */
+export type ShellConfig = {
+  brandHref: string;
+  subtitle: string;
+  nav: { href: string; label: string; icon: LucideIcon; exact?: boolean }[];
+  /** Where sign-out and an expired session go. */
+  signInHref: string;
+  /** Global search in the top bar. Hidden while the user is already on `listPath`. */
+  search?: { listPath: string; placeholder: string };
+};
 
-function isActive(pathname: string, href: string) {
-  return pathname.startsWith(href);
+function isActive(pathname: string, item: ShellConfig["nav"][number]) {
+  return item.exact ? pathname === item.href : pathname.startsWith(item.href);
 }
 
 // ---------- Remembered collapse state ----------
@@ -71,7 +64,7 @@ function useSidebarCollapsed() {
 
 // ---------- Shell ----------
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, config }: { children: React.ReactNode; config: ShellConfig }) {
   const pathname = usePathname();
   const collapsed = useSidebarCollapsed();
   const [drawer, setDrawer] = useState({ open: false, pathname });
@@ -105,40 +98,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ${drawerOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
           ${collapsed ? "lg:w-[72px]" : "lg:w-[256px]"}`}
       >
-        <SidebarHeader collapsed={collapsed} onCloseDrawer={() => setDrawerOpen(false)} />
+        <SidebarHeader config={config} collapsed={collapsed} onCloseDrawer={() => setDrawerOpen(false)} />
         <nav aria-label="Main" className="flex-1 px-3 py-4">
           <p className={`mb-2 px-3 text-[11px] font-semibold tracking-[0.12em] text-muted uppercase ${collapsed ? "lg:sr-only" : ""}`}>
             Reporting
           </p>
           <ul className="space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {config.nav.map((item) => (
               <li key={item.href}>
-                <NavLink {...item} active={isActive(pathname, item.href)} collapsed={collapsed} />
+                <NavLink {...item} active={isActive(pathname, item)} collapsed={collapsed} />
               </li>
             ))}
           </ul>
         </nav>
-        <UserBlock collapsed={collapsed} />
+        <UserBlock collapsed={collapsed} signInHref={config.signInHref} />
       </aside>
 
       <div className={`transition-[padding] duration-200 ease-out ${collapsed ? "lg:pl-[72px]" : "lg:pl-[256px]"}`}>
-        <TopBar pathname={pathname} onOpenDrawer={() => setDrawerOpen(true)} />
+        <TopBar pathname={pathname} search={config.search} onOpenDrawer={() => setDrawerOpen(true)} />
         <main className="mx-auto max-w-[1360px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
   );
 }
 
-function SidebarHeader({ collapsed, onCloseDrawer }: { collapsed: boolean; onCloseDrawer: () => void }) {
+function SidebarHeader({
+  config,
+  collapsed,
+  onCloseDrawer,
+}: {
+  config: ShellConfig;
+  collapsed: boolean;
+  onCloseDrawer: () => void;
+}) {
   return (
     <div className={`flex h-16 items-center border-b border-rule px-4 ${collapsed ? "lg:justify-center lg:px-0" : "justify-between"}`}>
-      <Link href="/admin/dashboard" className={`flex items-center gap-2.5 ${collapsed ? "lg:hidden" : ""}`}>
+      <Link href={config.brandHref} className={`flex items-center gap-2.5 ${collapsed ? "lg:hidden" : ""}`}>
         <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-md bg-signal text-[14px] font-bold text-white">
           B
         </span>
         <span className="leading-tight">
           <span className="block text-[14px] font-semibold">BND Reporting</span>
-          <span className="block text-[12px] text-muted">Invoice history</span>
+          <span className="block text-[12px] text-muted">{config.subtitle}</span>
         </span>
       </Link>
       <button
@@ -168,7 +169,7 @@ function NavLink({
   icon: Icon,
   active,
   collapsed,
-}: (typeof NAV_ITEMS)[number] & { active: boolean; collapsed: boolean }) {
+}: ShellConfig["nav"][number] & { active: boolean; collapsed: boolean }) {
   return (
     <Link
       href={href}
@@ -194,8 +195,8 @@ function NavLink({
   );
 }
 
-function UserBlock({ collapsed }: { collapsed: boolean }) {
-  // A 401 here (expired session) redirects to /admin inside the API helper.
+function UserBlock({ collapsed, signInHref }: { collapsed: boolean; signInHref: string }) {
+  // A 401 here (expired session) redirects to the sign-in page inside the API helper.
   const { data: user } = useApi<CurrentUser>("/api/auth/me");
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -206,7 +207,7 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
       await apiPost("/api/auth/logout");
     } finally {
       // In-app navigation, no page reload. replace() keeps "Back" from returning to a signed-in page.
-      router.replace("/admin");
+      router.replace(signInHref);
     }
   }
 
@@ -238,24 +239,32 @@ function UserBlock({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function TopBar({ pathname, onOpenDrawer }: { pathname: string; onOpenDrawer: () => void }) {
+function TopBar({
+  pathname,
+  search,
+  onOpenDrawer,
+}: {
+  pathname: string;
+  search: ShellConfig["search"];
+  onOpenDrawer: () => void;
+}) {
   const router = useRouter();
-  // The Invoices page has its own search field, so the global one is hidden there.
-  const showSearch = !pathname.startsWith("/admin/invoices");
+  // The list page has its own search field, so the global one is hidden there.
+  const showSearch = Boolean(search) && !pathname.startsWith(search?.listPath ?? "");
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-rule bg-surface/95 px-4 backdrop-blur sm:px-6 lg:px-8">
       <button type="button" onClick={onOpenDrawer} aria-label="Open menu" className="-ml-1 flex h-9 w-9 items-center justify-center rounded-md text-ink-soft hover:bg-paper lg:hidden">
         <Menu size={20} aria-hidden />
       </button>
-      {showSearch && (
+      {showSearch && search && (
         <form
           role="search"
           className="relative w-full max-w-md"
           onSubmit={(event) => {
             event.preventDefault();
             const q = String(new FormData(event.currentTarget).get("q") ?? "").trim();
-            router.push(q ? `/admin/invoices?q=${encodeURIComponent(q)}` : "/admin/invoices");
+            router.push(q ? `${search.listPath}?q=${encodeURIComponent(q)}` : search.listPath);
           }}
         >
           <Search size={16} aria-hidden className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
@@ -263,7 +272,7 @@ function TopBar({ pathname, onOpenDrawer }: { pathname: string; onOpenDrawer: ()
             name="q"
             type="search"
             aria-label="Search invoices"
-            placeholder="Search invoice no, member no or name…"
+            placeholder={search.placeholder}
             className={`${inputStyles} w-full bg-paper pl-9 focus:bg-surface`}
           />
         </form>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useState } from "react";
-import { RotateCcw, Search } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { InvoiceTable, type SortKey, type SortOrder } from "@/components/invoice-table";
 import {
   buttonStyles,
@@ -18,9 +17,9 @@ import {
 import { apiPath, useApi, type Facility, type InvoicePage } from "@/lib/api";
 import { formatCount } from "@/lib/format";
 import { positiveInt, useUrlParams } from "@/lib/url-state";
+import { SearchField } from "@/components/search-field";
 
 const SORT_KEYS: SortKey[] = ["invoice_date", "invoice_no", "member_name", "facility", "amount"];
-const SEARCH_DELAY_MS = 350;
 
 export function InvoicesView() {
   const url = useUrlParams();
@@ -123,32 +122,3 @@ export function InvoicesView() {
 }
 
 /** Search box that updates the URL shortly after typing stops. */
-function SearchField({ value, onSearch }: { value: string; onSearch: (value: string) => void }) {
-  const [draft, setDraft] = useState({ text: value, source: value });
-  if (draft.source !== value) setDraft({ text: value, source: value }); // follow outside changes (reset, top bar)
-
-  const search = useEffectEvent((text: string) => onSearch(text));
-  useEffect(() => {
-    const text = draft.text.trim();
-    if (text === value) return;
-    const timer = setTimeout(() => search(text), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [draft.text, value]);
-
-  return (
-    <label className="flex flex-1 flex-col gap-1 text-[12px] font-medium text-muted lg:min-w-[260px]">
-      Search
-      <span className="relative">
-        <Search size={16} aria-hidden className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
-        <input
-          type="search"
-          value={draft.text}
-          maxLength={100}
-          onChange={(e) => setDraft({ ...draft, text: e.target.value })}
-          placeholder="Invoice no, member no or member name"
-          className={`${inputStyles} w-full pl-9`}
-        />
-      </span>
-    </label>
-  );
-}

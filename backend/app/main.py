@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app import auth
 from app.database import database_is_reachable
 from app.errors import ServiceUnavailable
-from app.routes import admin, dashboard, end_user_auth, invoices, reports
+from app.routes import admin, dashboard, end_user_auth, invoices, portal, reports
 
 logger = logging.getLogger("bnd")
 
@@ -24,6 +24,7 @@ app.include_router(admin.router)
 app.include_router(end_user_auth.router)
 app.include_router(dashboard.router)
 app.include_router(invoices.router)
+app.include_router(portal.router)
 app.include_router(reports.router)
 
 

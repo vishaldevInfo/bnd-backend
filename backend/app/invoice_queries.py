@@ -213,12 +213,13 @@ def top_facilities(db: Connection, filters: InvoiceFilters, limit: int) -> list[
         ORDER BY t.total_amount DESC"""), {**params, "limit": limit}).mappings())
 
 
-def invoice_date_bounds(db: Connection) -> RowMapping:
-    """Earliest and latest invoice date in the whole data set."""
-    return db.execute(text("""
+def invoice_date_bounds(db: Connection, customerno: str | None = None) -> RowMapping:
+    """Earliest and latest invoice date, for every customer or for one customer number."""
+    owner = "WHERE customerno = :customerno" if customerno else ""
+    return db.execute(text(f"""
         SELECT min(invoicedate)::date AS first_invoice_date,
                max(invoicedate)::date AS last_invoice_date
-        FROM ar_invoicehistoryheader""")).mappings().one()
+        FROM ar_invoicehistoryheader {owner}"""), {"customerno": customerno}).mappings().one()
 
 
 def get_invoice_header(db: Connection, invoice_no: str, header_seq: str,

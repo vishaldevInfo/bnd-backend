@@ -169,6 +169,11 @@ def load_end_user(session: Session) -> EndUser:
     return EndUser(user_id=str(row["id"]), customerno=row["customerno"], email=row["email"])
 
 
+def require_end_user(session: Session = Depends(get_session)) -> EndUser:
+    """The active customer behind the session. Admins get 403."""
+    return load_end_user(session)
+
+
 def invoice_scope(session: Session = Depends(get_session)) -> InvoiceScope:
     """Admins see every customer. End users see only their own customer number."""
     if session.role == "admin":

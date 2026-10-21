@@ -97,3 +97,22 @@ def test_session_token_for_a_deleted_user_is_refused(client, db, app_db):
     mine, _ = two_customers(db)
     client.cookies.set(SESSION_COOKIE, issue_end_user_session("00000000-0000-4000-8000-000000000000"))
     assert client.get("/api/invoices").status_code == 401
+
+
+def test_customer_dashboard_totals_cover_only_their_own_invoices(client, db, app_db):
+    mine, _ = two_customers(db)
+    end_user_client(client, app_db, mine["customerno"], "dash")
+    expected = db.execute(text("""
+        SELECT count(*), coalesce(sum(taxablesalesamt + nontaxablesalesamt), 0)
+        FROM ar_invoicehistoryheader WHERE TRIM(customerno) = :c"""), {"c": mine["customerno"]}).one()
+
+    body = client.get("/api/portal/summary").json()
+    assert body["current"]["invoice_count"] == expected[0]
+    assert float(body["current"]["total_amount"]) == pytest.approx(float(expected[1]), abs=0.01)
+    assert sum(m["invoice_count"] for m in body["monthly"]) == expected[0]
+
+
+def test_customer_dashboard_is_refused_to_admins_and_anonymous(client, signed_in_client):
+    assert signed_in_client.get("/api/portal/summary").status_code == 403
+    client.cookies.clear()
+    assert client.get("/api/portal/summary").status_code == 401

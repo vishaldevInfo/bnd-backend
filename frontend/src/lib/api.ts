@@ -169,6 +169,15 @@ export type DashboardSummary = {
   recent_invoices: InvoiceRow[];
 };
 
+export type PortalSummary = {
+  currency: string;
+  first_invoice_date: string | null;
+  last_invoice_date: string | null;
+  current: PeriodTotals;
+  previous: PeriodTotals | null;
+  monthly: DashboardSummary["monthly"];
+};
+
 export type InvoiceReport = {
   start: string | null;
   end: string | null;

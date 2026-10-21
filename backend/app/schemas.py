@@ -184,6 +184,17 @@ class FacilityTotal(BaseModel):
     total_amount: Decimal
 
 
+class PortalSummary(BaseModel):
+    """Customer dashboard: the signed-in customer's own totals only."""
+    currency: str
+    first_invoice_date: date | None
+    last_invoice_date: date | None
+    current: PeriodTotals
+    previous: PeriodTotals | None = Field(
+        description="Same-length period immediately before `start`; only when both start and end are given.")
+    monthly: list[MonthlyTotal]
+
+
 class DashboardSummary(BaseModel):
     currency: str
     first_invoice_date: date | None

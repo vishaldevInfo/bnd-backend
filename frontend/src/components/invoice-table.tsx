@@ -25,15 +25,17 @@ type Sorting = { sort: SortKey; order: SortOrder; onSort: (sort: SortKey, order:
  * also a real link so keyboard and screen-reader users can reach it.
  * Wide tables scroll horizontally on small screens instead of squashing.
  */
-export function InvoiceTable({ rows, sorting }: { rows: InvoiceRow[]; sorting?: Sorting }) {
+export function InvoiceTable({ rows, sorting, customer = false }: { rows: InvoiceRow[]; sorting?: Sorting; customer?: boolean }) {
   const router = useRouter();
+  // Customers see their own invoices only: no member column, and no links to admin pages.
+  const columns = customer ? COLUMNS.filter((column) => column.key !== "member_name") : COLUMNS;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] border-collapse text-[13.5px]">
         <thead>
           <tr className="border-y border-rule bg-paper/60 text-left text-[11.5px] font-semibold tracking-[0.06em] text-muted uppercase">
-            {COLUMNS.map((column) => (
+            {columns.map((column) => (
               <th
                 key={column.key}
                 scope="col"
@@ -51,22 +53,28 @@ export function InvoiceTable({ rows, sorting }: { rows: InvoiceRow[]; sorting?: 
           {rows.map((row) => (
             <tr
               key={`${row.invoice_no}-${row.header_seq}`}
-              onClick={() => router.push(invoiceHref(row))}
-              className="cursor-pointer hover:bg-row-hover"
+              onClick={customer ? undefined : () => router.push(invoiceHref(row))}
+              className={customer ? "" : "cursor-pointer hover:bg-row-hover"}
             >
               <td className="px-5 py-3 font-medium whitespace-nowrap">
-                <Link
-                  href={invoiceHref(row)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-signal tabular-nums hover:underline"
-                >
-                  #{row.invoice_no}
-                </Link>
+                {customer ? (
+                  <span className="text-ink tabular-nums">#{row.invoice_no}</span>
+                ) : (
+                  <Link
+                    href={invoiceHref(row)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-signal tabular-nums hover:underline"
+                  >
+                    #{row.invoice_no}
+                  </Link>
+                )}
               </td>
-              <td className="px-5 py-3">
-                <span className="block">{row.member_name || "—"}</span>
-                <span className="text-[12px] text-muted tabular-nums">{row.member_no}</span>
-              </td>
+              {!customer && (
+                <td className="px-5 py-3">
+                  <span className="block">{row.member_name || "—"}</span>
+                  <span className="text-[12px] text-muted tabular-nums">{row.member_no}</span>
+                </td>
+              )}
               <td className="max-w-[260px] px-5 py-3">
                 <span className={`block truncate ${row.facility_known ? "" : "text-muted italic"}`} title={row.facility_name}>
                   {row.facility_name}
