@@ -10,6 +10,10 @@ from sqlalchemy import URL, Connection, create_engine, text
 
 from app.config import get_settings
 
+
+import logging
+logger = logging.getLogger("uvicorn.error")
+
 settings = get_settings()
 
 engine = create_engine(
@@ -23,8 +27,9 @@ engine = create_engine(
     ),
     pool_pre_ping=True,
     connect_args={
-        "options": "-c default_transaction_read_only=on -c statement_timeout=15000",
-        "connect_timeout": 5,
+        "options": "-c default_transaction_read_only=on -c statement_timeout=15000",  # Fix 2 liya to hata do
+        "connect_timeout": 10,
+        "sslmode": "require",
     },
 )
 
@@ -41,4 +46,14 @@ def database_is_reachable() -> bool:
             connection.execute(text("SELECT 1"))
         return True
     except Exception:
+        logger.exception("Database health check failed")
         return False
+    
+
+# def database_is_reachable() -> bool:
+#     try:
+#         with engine.connect() as connection:
+#             connection.execute(text("SELECT 1"))
+#         return True
+#     except Exception:
+#         return False
