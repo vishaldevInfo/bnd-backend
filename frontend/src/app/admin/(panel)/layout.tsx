@@ -12,9 +12,9 @@ const ADMIN_SHELL: ShellConfig = {
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/invoices", label: "Invoices", icon: Receipt },
     { href: "/admin/reports", label: "Reports", icon: FileText },
-    { href: "/admin/review-queue", label: "Review queue", icon: ListChecks },
+    // { href: "/admin/review-queue", label: "Review queue", icon: ListChecks },
   ],
-  search: { listPath: "/admin/invoices", placeholder: "Search invoice no, member no or name…" },
+  // search: { listPath: "/admin/invoices", placeholder: "Search invoice no, member no or name…" },
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
